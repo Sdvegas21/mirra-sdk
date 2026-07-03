@@ -5,9 +5,18 @@ The path for an outside developer to wrap an agent and see **enforcement** and
 
 ## 0. What you need (1 minute)
 
-- Python 3.10+
-- The four local packages (during the private beta these are sibling checkouts;
-  a single `pip install mirra-sdk` replaces this step at release):
+Python 3.10+ and the platform packages. Two ways to get them:
+
+**Option A — install from wheels (recommended):**
+
+```bash
+pip install wheels/*.whl        # contract, engine, runtime, memory, SDK — one step
+```
+
+(`wheels/` ships with the private beta; `pip install mirra-sdk` replaces this at
+release. Build them yourself anytime: `pip wheel <each-repo> -w wheels --no-deps`.)
+
+**Option B — sibling checkouts (development layout):**
 
 ```bash
 workspace/
@@ -25,8 +34,8 @@ The SDK's demo and tests wire these paths automatically (override with
 
 ```bash
 cd mirra-sdk
-python demo/demo_sdk.py     # session 1 — the agent meets alice and bob
-python demo/demo_sdk.py     # session 2 — it recognizes you and remembers, provably
+python3 demo/demo_sdk.py     # session 1 — the agent meets alice and bob
+python3 demo/demo_sdk.py     # session 2 — it recognizes you and remembers, provably
 ```
 
 Session 2 prints `SAME identity as your last run`, recalls alice's memories with
@@ -46,8 +55,14 @@ def my_agent(message: str, context: dict) -> str:
     past = context["history"]
     return f"({len(past)} shared memories) responding to: {message}"
 
-wrapped = mirra.wrap(my_agent, principal="my-api-key-1")
+wrapped = mirra.wrap(my_agent, principal="my-api-key-1", profile="dev_balanced")
 ```
+
+**About `profile`:** `dev_balanced` is the profile to build against — safe actions
+allow, hostile ones block, risky ones step up. The default is `prod_locked`, the
+production posture: fail-closed, meaning **every** action is refused unless the
+caller supplies risk context or step-up approval — so if you omit `profile` and
+everything blocks, that's the lockdown working, not a bug.
 
 That single call gives you:
 

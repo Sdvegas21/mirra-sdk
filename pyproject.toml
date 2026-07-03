@@ -6,7 +6,20 @@ build-backend = "setuptools.build_meta"
 name = "mirra-sdk"
 version = "0.1.0"
 description = "MIRRA platform SDK (Edge 1): one wrapper call gives any agent recognition, portable signed memory, per-relationship behavior, and permissioned execution over the frozen v1 core contract."
+readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Shawn Cohen", email = "shawn@universalmediaus.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "mirra-core-contract>=1.0.0",
     "cryptography>=41.0",

@@ -57,10 +57,19 @@ class ClawZeroExecutionAuthorizer:
     """
 
     def __init__(self, witness_dir: Path | str, profile: str = "prod_locked"):
+        import os
+
         from clawzero.runtime import MVARRuntime  # soft dependency; wrap() catches ImportError
 
         self._witness_dir = Path(witness_dir)
         self._witness_dir.mkdir(parents=True, exist_ok=True)
+        # Keep engine state (one-time-token nonce log) inside the SDK home instead
+        # of littering the developer's working directory. Respect an explicit
+        # override if the operator already set one.
+        os.environ.setdefault(
+            "MVAR_EXEC_TOKEN_NONCE_STORE",
+            str(self._witness_dir.parent / "engine" / "execution_token_nonces.jsonl"),
+        )
         self._runtime = MVARRuntime(profile=profile, witness_dir=self._witness_dir)
         self._profile = profile
 

@@ -7,7 +7,7 @@ execution that only happens when verified.**
 ```python
 import mirra
 
-wrapped = mirra.wrap(my_agent, principal="team-key-1")
+wrapped = mirra.wrap(my_agent, principal="team-key-1", profile="dev_balanced")
 
 wrapped.identity                     # recognized across sessions, not met fresh
 wrapped.remember("alice", "…")       # signed scroll — verify-on-read, fail-closed
@@ -32,6 +32,12 @@ verification.
 | Per-relationship behavior | `interact` / `build_context` | The agent sees each subject's own verified history |
 | Permissioned execution | `execute` / `protect_tool` | Deterministic allow/block with an Ed25519-signed witness; forged records fail verification; no engine → refuse |
 
+**Profiles:** build against `dev_balanced` (safe actions allow, hostile ones
+block, risky ones step up). The default is `prod_locked` — the fail-closed
+production posture where every action is refused unless the caller supplies
+risk context or step-up approval. If you omit `profile` and everything blocks,
+that is the lockdown working as designed.
+
 ## Fail-closed by design
 
 - No enforcement engine → every action is **blocked**, never silently allowed.
@@ -42,7 +48,7 @@ verification.
 ## Demo
 
 ```bash
-python demo/demo_sdk.py     # run twice — the second run proves recognition
+python3 demo/demo_sdk.py     # run twice — the second run proves recognition
 ```
 
 See `DEMO.md` for the five-minute walkthrough.
@@ -50,7 +56,7 @@ See `DEMO.md` for the five-minute walkthrough.
 ## Tests
 
 ```bash
-python -m pytest tests/ -q
+python3 -m pytest tests/ -q
 ```
 
 The suite is organized by acceptance criterion: `test_recognition.py`,
