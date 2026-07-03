@@ -6,7 +6,7 @@ The path for an outside developer to wrap an agent and see **enforcement** and
 **The whole thing, two commands:**
 
 ```bash
-pip install wheels/*.whl     # at release: pip install mirra-sdk mvar-security clawzero clawseal
+pip install mirra-sdk mvar-security clawzero clawseal
 mirra-demo                   # live report: 5/5 PASS, hostile shell blocked, forged record rejected
 ```
 
@@ -18,15 +18,12 @@ this document is the same proof, unpacked.
 
 Python 3.10+ and the platform packages. Two ways to get them:
 
-**Option A — install from wheels (recommended):**
+**Option A — install from PyPI (recommended):**
 
 ```bash
 python3 -m venv --upgrade-deps .venv && source .venv/bin/activate   # clean env, current pip
-pip install wheels/*.whl        # contract, engine, runtime, memory, SDK — one step
+pip install mirra-sdk mvar-security clawzero clawseal              # the whole platform
 ```
-
-(`wheels/` ships with the private beta; `pip install mirra-sdk` replaces this at
-release. Build them yourself anytime: `pip wheel <each-repo> -w wheels --no-deps`.)
 
 **Option B — sibling checkouts (development layout):**
 
