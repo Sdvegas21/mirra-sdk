@@ -3,6 +3,17 @@
 The path for an outside developer to wrap an agent and see **enforcement** and
 **signed memory** working, end to end. No accounts, no network, no config files.
 
+**The whole thing, two commands:**
+
+```bash
+pip install wheels/*.whl     # at release: pip install mirra-sdk mvar-security clawzero clawseal
+mirra-demo                   # live report: 5/5 PASS, hostile shell blocked, forged record rejected
+```
+
+Run `mirra-demo` a second time and it recognizes you — same identity, memories
+recalled and signature-verified. (`mirra-demo --reset` starts over.) The rest of
+this document is the same proof, unpacked.
+
 ## 0. What you need (1 minute)
 
 Python 3.10+ and the platform packages. Two ways to get them:

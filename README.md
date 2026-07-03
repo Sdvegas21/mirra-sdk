@@ -47,8 +47,16 @@ that is the lockdown working as designed.
 
 ## Demo
 
+Installed (pip):
+
 ```bash
-python3 demo/demo_sdk.py     # run twice — the second run proves recognition
+mirra-demo                   # live 5-check report; run twice — the second run proves recognition
+```
+
+From a checkout:
+
+```bash
+python3 demo/demo_sdk.py     # narrative version of the same proof
 ```
 
 See `DEMO.md` for the five-minute walkthrough.

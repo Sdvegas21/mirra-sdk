@@ -25,6 +25,9 @@ dependencies = [
     "cryptography>=41.0",
 ]
 
+[project.scripts]
+mirra-demo = "mirra.demo:main"
+
 [project.optional-dependencies]
 # Concrete core components. The SDK speaks only the contract; these provide the
 # default backends when installed (local paths during the restructure).
