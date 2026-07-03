@@ -6,7 +6,7 @@ The path for an outside developer to wrap an agent and see **enforcement** and
 **The whole thing, two commands:**
 
 ```bash
-pip install mirra-sdk mvar-security clawzero clawseal
+pip install --upgrade mirra-sdk mvar-security clawzero clawseal
 mirra-demo                   # live report: 5/5 PASS, hostile shell blocked, forged record rejected
 ```
 
@@ -22,7 +22,7 @@ Python 3.10+ and the platform packages. Two ways to get them:
 
 ```bash
 python3 -m venv --upgrade-deps .venv && source .venv/bin/activate   # clean env, current pip
-pip install mirra-sdk mvar-security clawzero clawseal              # the whole platform
+pip install --upgrade mirra-sdk mvar-security clawzero clawseal              # the whole platform
 ```
 
 **Option B — sibling checkouts (development layout):**

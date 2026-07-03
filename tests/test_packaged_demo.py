@@ -12,6 +12,29 @@ def test_mirra_demo_passes_end_to_end(sdk_home, monkeypatch, capsys):
     assert exit_code == 0
     assert "RESULT: 5/5 PASS" in out
     assert "UNTRUSTED_TO_CRITICAL_SINK" in out
+    # The Ed25519 claim must be asserted by the check itself, not narrated.
+    assert "Ed25519 witness verified against its embedded public key" in out
+
+
+def test_mirra_demo_refuses_stale_components(sdk_home, monkeypatch, capsys):
+    """Pre-hardening versions left in place by pip ('already satisfied') must
+    cause a REFUSAL with upgrade guidance — never a passing report on old code."""
+    real = packaged_demo._installed_version
+
+    def stale(name, module):
+        if name == "clawzero":
+            return "0.3.0"
+        return real(name, module)
+
+    monkeypatch.setenv("QSEAL_SECRET", "test-secret-for-packaged-demo")
+    monkeypatch.setattr(packaged_demo, "_installed_version", stale)
+    exit_code = packaged_demo.main(["--home", str(sdk_home), "--reset"])
+    out = capsys.readouterr().out
+    assert exit_code == 1
+    assert "STALE" in out
+    assert "pip install --upgrade" in out
+    assert "Checks did not run" in out
+    assert "recognition" not in out  # no checks executed on stale code
 
 
 def test_mirra_demo_recognizes_returning_session(sdk_home, monkeypatch, capsys):

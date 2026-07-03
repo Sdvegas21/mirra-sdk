@@ -46,18 +46,59 @@ def _agent(message: str, context: dict) -> str:
     return f"Welcome back {context['subject_id']} — I remember {len(history)} thing(s) about you."
 
 
-def _component_line(name: str, module: str) -> tuple[bool, str]:
-    try:
-        mod = __import__(module)
-    except Exception:
-        return False, f"  {CROSS} {name:<22} not importable — pip install {name}"
+# The oldest versions whose security guarantees match what this demo reports.
+# Older releases exist on PyPI (pre-hardening: format-only witness checks, no
+# fail-closed engine requirement, no contract adapter) and pip will happily
+# leave them in place as "already satisfied" — so stale components are a
+# REFUSAL, not a warning.
+MINIMUM_VERSIONS = {
+    "mirra-core-contract": "1.0.0",
+    "mvar-security": "1.5.3",
+    "clawzero": "0.4.1",
+    "clawseal": "1.1.7",
+}
+
+UPGRADE_CMD = "pip install --upgrade mirra-sdk mvar-security clawzero clawseal"
+
+
+def _version_tuple(version: str) -> tuple:
+    parts = []
+    for piece in version.split("."):
+        digits = "".join(ch for ch in piece if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts)
+
+
+def _installed_version(name: str, module) -> str:
     try:
         from importlib.metadata import version as _dist_version
 
-        version = _dist_version(name)
+        return _dist_version(name)
     except Exception:
-        version = getattr(mod, "__version__", "?")
-    return True, f"  {CHECK} {name:<22} {module} {version}"
+        return getattr(module, "__version__", "0")
+
+
+def _component_line(name: str, modules: str | tuple) -> tuple[bool, str]:
+    candidates = (modules,) if isinstance(modules, str) else tuple(modules)
+    mod = None
+    found = ""
+    for candidate in candidates:
+        try:
+            mod = __import__(candidate)
+            found = candidate
+            break
+        except Exception:
+            continue
+    if mod is None:
+        return False, f"  {CROSS} {name:<22} not importable — pip install {name}"
+    version = _installed_version(name, mod)
+    floor = MINIMUM_VERSIONS.get(name)
+    if floor and _version_tuple(version) < _version_tuple(floor):
+        return False, (
+            f"  {CROSS} {name:<22} {version} is STALE (< {floor}) — this demo's "
+            f"guarantees only hold on current code. Run: {UPGRADE_CMD}"
+        )
+    return True, f"  {CHECK} {name:<22} {found} {version}"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,12 +123,20 @@ def main(argv: list[str] | None = None) -> int:
     env_ok = True
     for name, module in (("mirra-sdk", "mirra"), ("mirra-core-contract", "mirra_core_contract"),
                          ("clawzero", "clawzero"), ("mvar-security", "mvar"),
-                         ("clawseal", "clawseal")):
+                         ("clawseal", ("clawseal", "clawseal_core"))):
         ok, line = _component_line(name, module)
         env_ok = env_ok and ok
         print(line)
     print(f"  state: {home}  ({'returning session' if returning else 'first run'})")
     print()
+
+    if not env_ok:
+        print("=" * 64)
+        print(f"RESULT: REFUSED — stale or missing components (see {CROSS} rows).")
+        print(f"Fix with: {UPGRADE_CMD}")
+        print("Checks did not run: results on stale code would not mean what this")
+        print("report says they mean (fail-closed applies to the demo too).")
+        return 1
 
     import mirra
     from mirra.execution import FailClosedAuthorizer
@@ -153,21 +202,26 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             record("differentiation", False, f"error: {exc}")
 
-        # 4. Enforcement with verifiable witness
+        # 4. Enforcement with verifiable witness — the Ed25519 claim is ASSERTED,
+        # never assumed: a run that fell back to any other scheme fails this check.
         try:
             hostile = wrapped.execute("shell.exec", HOSTILE, provenance=dict(UNTRUSTED))
             blocked = hostile.decision == "block"
-            witness_ok = wrapped.verify_decision(hostile).verified
+            is_ed25519 = str(hostile.witness_signature).startswith("ed25519:")
+            verification = wrapped.verify_decision(hostile)
+            witness_ok = verification.verified and verification.scheme == "ed25519"
             forged = dataclasses.replace(hostile, decision="allow")
             forged_fails = not wrapped.verify_decision(forged).verified
             safe = wrapped.execute("filesystem.read", "/workspace/notes.txt",
                                    provenance=dict(TRUSTED))
             allowed = safe.decision == "allow"
-            ok = blocked and witness_ok and forged_fails and allowed
+            ok = blocked and is_ed25519 and witness_ok and forged_fails and allowed
             record("enforcement", ok,
-                   f"hostile shell BLOCKED ({hostile.reason_code}), Ed25519 witness verifies, "
-                   "forged 'allow' rejected, safe read allowed"
-                   if ok else f"blocked={blocked} witness={witness_ok} "
+                   f"hostile shell BLOCKED ({hostile.reason_code}), Ed25519 witness "
+                   "verified against its embedded public key, forged 'allow' rejected, "
+                   "safe read allowed"
+                   if ok else f"blocked={blocked} ed25519_scheme={is_ed25519} "
+                              f"witness_verified={witness_ok} "
                               f"forged_fails={forged_fails} safe_allowed={allowed}")
         except Exception as exc:
             record("enforcement", False, f"error: {exc}")
