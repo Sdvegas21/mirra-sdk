@@ -27,5 +27,5 @@ def test_leak_gate_passes_on_sdk_package():
 
 def test_leak_gate_passes_on_all_public_surfaces():
     result = _run_gate(SDK_REPO / "mirra", SDK_REPO / "mirra_gateway",
-                       SDK_REPO / "tests", SDK_REPO / "demo")
+                       SDK_REPO / "mirra_device", SDK_REPO / "tests", SDK_REPO / "demo")
     assert result.returncode == 0, f"leak gate failed:\n{result.stdout}\n{result.stderr}"
