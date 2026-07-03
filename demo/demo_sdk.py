@@ -66,7 +66,12 @@ def my_agent(message: str, context: dict) -> str:
 
 
 def main() -> int:
-    first_run = not HOME.exists()
+    # First-run detection is per THIS walkthrough, not per state directory —
+    # the installed `mirra-demo` command shares the same default home but uses
+    # a different principal, and must not make a first walkthrough claim
+    # "SAME identity as your last run".
+    marker = HOME / ".walkthrough_seen"
+    first_run = not marker.exists()
 
     banner("1. RECOGNITION — one wrapper call")
     wrapped = mirra.wrap(my_agent, principal="design-partner-key-1",
@@ -111,6 +116,9 @@ def main() -> int:
 
     forged = dataclasses.replace(hostile, decision="allow")
     print(f"  verify_decision(forged 'allow')-> verified={wrapped.verify_decision(forged).verified}  (forgery rejected)")
+
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("walked\n", encoding="utf-8")
 
     banner("DONE")
     print("  Run this script again to see recognition + memory persist across sessions.")

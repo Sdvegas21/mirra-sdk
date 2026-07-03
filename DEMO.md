@@ -21,6 +21,7 @@ Python 3.10+ and the platform packages. Two ways to get them:
 **Option A — install from wheels (recommended):**
 
 ```bash
+python3 -m venv --upgrade-deps .venv && source .venv/bin/activate   # clean env, current pip
 pip install wheels/*.whl        # contract, engine, runtime, memory, SDK — one step
 ```
 
