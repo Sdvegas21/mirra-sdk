@@ -107,16 +107,67 @@ class GuardedAgent:
 
     def protect(self, tool: Callable, *, sink: Optional[str] = None,
                 trusted: bool = False) -> Callable:
-        """Wrap a tool so it only runs when authorized. Zero config: the sink is
-        inferred from the tool name; tool input is treated as untrusted by
-        default (the realistic threat). Blocked calls raise ExecutionRefused."""
-        sink_type = sink or _infer_sink(getattr(tool, "__name__", "tool"))
+        """Wrap a tool so it only runs when authorized. Zero config, and the
+        security boundary does NOT depend on guessing the tool's name: an
+        explicit `sink` wins; otherwise the sink is inferred per-call from BOTH
+        the tool name and the actual call target/arguments, so a dangerous
+        payload (e.g. `curl ... | bash`) is classified as `shell.exec` even if
+        the tool is generically named. Tool input is untrusted by default (the
+        realistic threat). Blocked calls raise ExecutionRefused."""
+        name_hint = getattr(tool, "__name__", "tool")
         provenance = dict(_TRUSTED if trusted else _UNTRUSTED)
-        return self._w.protect_tool(tool, sink=sink_type, provenance=provenance)
+        explicit_sink = sink
+
+        def protected(*args: Any, **kwargs: Any) -> Any:
+            target = _extract_target(args, kwargs, name_hint)
+            sink_type = explicit_sink or _infer_sink_from_call(name_hint, target)
+            record = self._w.execute(
+                sink_type=sink_type, target=target,
+                arguments={"args": [str(a) for a in args],
+                           "kwargs": {k: str(v) for k, v in kwargs.items()}},
+                provenance=dict(provenance),
+            )
+            if record.decision != "allow":
+                raise ExecutionRefused(
+                    f"{sink_type} refused ({record.decision}): {record.reason_code}", record)
+            return tool(*args, **kwargs)
+
+        protected.__name__ = f"guarded_{name_hint}"
+        return protected
 
 
-def _infer_sink(name: str) -> str:
+def _extract_target(args: tuple, kwargs: dict, name_hint: str) -> str:
+    for key in ("command", "cmd", "target", "url", "path", "file", "query", "input"):
+        if key in kwargs:
+            return str(kwargs[key])
+    if args:
+        return str(args[0])
+    return name_hint
+
+
+# Payload patterns that indicate a critical sink REGARDLESS of the tool's name —
+# the security boundary must not depend on a developer naming their tool well.
+_SHELL_PATTERNS = ("|", "&&", ";", "`", "$(", "curl ", "wget ", "bash", "sh -c",
+                   "rm ", "chmod ", "/etc/", "eval ", "exec ")
+_NET_PATTERNS = ("http://", "https://", "ftp://", "ssh://")
+_CRED_PATTERNS = ("/.ssh/", "id_rsa", "credential", "secret", "password",
+                  "api_key", "token", ".env")
+
+
+def _infer_sink_from_call(name: str, target: str) -> str:
+    """Classify the sink from BOTH the tool name and the actual call target.
+    Content wins over name — a payload that looks like a shell command is
+    shell.exec even if the tool is called 'do_thing'."""
+    t = str(target).lower()
     n = name.lower()
+    # Content-based (payload) classification first — this is the security-critical path.
+    if any(p in t for p in _CRED_PATTERNS):
+        return "credentials.access"
+    if any(p in t for p in _SHELL_PATTERNS):
+        return "shell.exec"
+    if any(p in t for p in _NET_PATTERNS):
+        return "http.request"
+    # Then name hints (for benign classification / observability).
     if any(k in n for k in ("bash", "shell", "exec", "command", "run", "system")):
         return "shell.exec"
     if any(k in n for k in ("write", "save", "delete", "remove", "create")):
@@ -128,6 +179,11 @@ def _infer_sink(name: str) -> str:
     if any(k in n for k in ("credential", "secret", "token", "password", "key", "env")):
         return "credentials.access"
     return "tool.custom"
+
+
+def _infer_sink(name: str) -> str:
+    """Name-only inference (kept for callers that only have a name)."""
+    return _infer_sink_from_call(name, name)
 
 
 def guard(agent: Any = None, *, app: Optional[str] = None, home: Optional[str] = None,

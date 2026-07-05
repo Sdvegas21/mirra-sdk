@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mirra-sdk"
-version = "0.3.0"
+version = "0.3.1"
 description = "MIRRA platform SDK (Edge 1): one wrapper call gives any agent recognition, portable signed memory, per-relationship behavior, and permissioned execution over the frozen v1 core contract."
 readme = "README.md"
 requires-python = ">=3.10"
