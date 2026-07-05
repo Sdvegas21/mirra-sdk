@@ -10,7 +10,7 @@ def test_mirra_demo_passes_end_to_end(sdk_home, monkeypatch, capsys):
     exit_code = packaged_demo.main(["--home", str(sdk_home), "--reset"])
     out = capsys.readouterr().out
     assert exit_code == 0
-    assert "RESULT: 5/5 PASS" in out
+    assert "RESULT: 6/6 PASS" in out
     assert "UNTRUSTED_TO_CRITICAL_SINK" in out
     # The Ed25519 claim must be asserted by the check itself, not narrated.
     assert "Ed25519 witness verified against its embedded public key" in out

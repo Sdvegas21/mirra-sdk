@@ -11,14 +11,18 @@ frozen v1 core contract (`mirra_core_contract`).
 
 from .errors import ExecutionRefused, IdentityError, MemoryUnavailable, MirraError
 from .identity import LocalIdentityResolver
+from .person import Person, PersonClaim, PersonRegistry
 from .wrapper import WrappedAgent, wrap
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 __all__ = [
     "wrap",
     "WrappedAgent",
     "LocalIdentityResolver",
+    "Person",
+    "PersonClaim",
+    "PersonRegistry",
     "MirraError",
     "IdentityError",
     "MemoryUnavailable",

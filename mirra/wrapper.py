@@ -58,12 +58,33 @@ class WrappedAgent:
         memory,
         authorizer,
         providers: List[Any],
+        persons=None,
     ):
         self._agent = agent
         self._memory = memory
         self._authorizer = authorizer
         self._providers = providers
+        self._persons = persons  # optional PersonRegistry for cross-device recognition
         self.identity = self._enriched(identity)
+
+    def _memory_key(self, subject_id: str) -> str:
+        """Resolve a subject handle to its stable memory key.
+
+        With a PersonRegistry, a handle claimed into a Person keys memory on the
+        stable person_id — so the same human's history is ONE chain across every
+        device/handle. Without a registry (or an unclaimed handle), the raw
+        subject_id is used: fully backward-compatible.
+        """
+        if self._persons is None:
+            return subject_id
+        person = self._persons.resolve_handle(subject_id)
+        return person.person_id if person is not None else subject_id
+
+    def person_for(self, subject_id: str):
+        """The Person a subject handle resolves to, or None."""
+        if self._persons is None:
+            return None
+        return self._persons.resolve_handle(subject_id)
 
     # -- Recognition ---------------------------------------------------------
 
@@ -80,12 +101,12 @@ class WrappedAgent:
     def remember(self, subject_id: str, content: Any) -> Scroll:
         if self._memory is None:
             raise MemoryUnavailable("no memory backend configured")
-        return self._memory.remember(self.identity.agent_id, subject_id, content)
+        return self._memory.remember(self.identity.agent_id, self._memory_key(subject_id), content)
 
     def recall(self, subject_id: str, query: Optional[str] = None) -> List[Scroll]:
         if self._memory is None:
             raise MemoryUnavailable("no memory backend configured")
-        return self._memory.recall(self.identity.agent_id, subject_id, query)
+        return self._memory.recall(self.identity.agent_id, self._memory_key(subject_id), query)
 
     def verify(self, scroll: Scroll) -> VerificationResult:
         if self._memory is None:
@@ -98,9 +119,14 @@ class WrappedAgent:
         """The per-relationship context handed to the agent: this subject's verified
         history plus any provider-supplied identity context."""
         history = self.recall(subject_id) if self._memory is not None else []
+        person = self.person_for(subject_id)
         return {
             "agent_id": self.identity.agent_id,
             "subject_id": subject_id,
+            # Present when the handle is recognized as a known person — this is
+            # "it knew it was my mother": same human, same history, any device.
+            "person_id": person.person_id if person else None,
+            "person_name": person.display_name if person else None,
             "history": [getattr(s, "content", s) for s in history],
             "identity_context": dict(self.identity.context or {}),
         }
@@ -193,6 +219,8 @@ def wrap(
     identity_resolver=None,
     memory=None,
     authorizer=None,
+    persons: Any = None,
+    recognize_persons: bool = False,
 ) -> WrappedAgent:
     """Wrap an agent with recognition, signed memory, per-relationship behavior,
     and permissioned execution.
@@ -206,6 +234,11 @@ def wrap(
         profile: enforcement policy profile (default prod_locked).
         providers: optional contract CapabilityProviders, injected at runtime.
         identity_resolver / memory / authorizer: contract-typed overrides.
+        persons: a PersonRegistry (or None). When present, subject handles claimed
+            into a Person share ONE signed history across devices/agents.
+        recognize_persons: if True and `persons` is None, create a default
+            PersonRegistry under the SDK home. Off by default — pure
+            backward-compatible per-subject behavior unless opted in.
     """
     home_path = Path(home) if home is not None else DEFAULT_HOME
     home_path.mkdir(parents=True, exist_ok=True)
@@ -217,6 +250,9 @@ def wrap(
         memory = default_memory(home_path / "memory", identity.agent_id)
     if authorizer is None:
         authorizer = default_authorizer(home_path / "witnesses", profile=profile)
+    if persons is None and recognize_persons:
+        from .person import PersonRegistry
+        persons = PersonRegistry(home_path)
 
     return WrappedAgent(
         agent=agent,
@@ -224,4 +260,5 @@ def wrap(
         memory=memory,
         authorizer=authorizer,
         providers=list(providers or []),
+        persons=persons,
     )

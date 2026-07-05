@@ -11,4 +11,4 @@ requires the framework to be installed. Ask for the one you use:
     from mirra.adapters.langchain import wrap_agent
 """
 
-__all__ = ["langchain"]
+__all__ = ["langchain", "llamaindex", "openai_agents", "crewai"]

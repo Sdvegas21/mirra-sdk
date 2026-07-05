@@ -226,7 +226,38 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             record("enforcement", False, f"error: {exc}")
 
-        # 5. Fail-closed without an engine
+        # 5. Person recognition — the same human across devices/agents. Memory
+        # written under one device handle is recalled under another; a signed
+        # claim lets a second device recognize her and refuses if tampered.
+        try:
+            from mirra.person import PersonClaim, PersonRegistry
+
+            phone = PersonRegistry(home / "demo_phone")
+            mom = phone.create_person(display_name="Mom")
+            phone.claim_handle(mom.person_id, "car:driver-1")
+            phone.claim_handle(mom.person_id, "robot:mom")
+
+            hub = mirra.wrap(_agent, principal="mirra-demo-key", home=home,
+                             profile="dev_balanced", persons=phone)
+            hub.remember("car:driver-1", "running late to school drop-off")
+            cross = any("school drop-off" in str(s.content) for s in hub.recall("robot:mom"))
+
+            claim = phone.export_claim(mom.person_id)
+            robot = PersonRegistry(home / "demo_robot")
+            recognized = robot.import_claim(claim).person_id == mom.person_id
+            forged = PersonClaim.from_dict({**claim.to_dict(), "display_name": "Imposter"})
+            forgery_rejected = not PersonRegistry.verify_claim(forged)
+
+            ok = cross and recognized and forgery_rejected
+            record("person recognition", ok,
+                   "same human across car+robot handles (one signed history), "
+                   "recognized cross-device via signed claim, forged claim rejected"
+                   if ok else f"cross_device_history={cross} recognized={recognized} "
+                              f"forgery_rejected={forgery_rejected}")
+        except Exception as exc:
+            record("person recognition", False, f"error: {exc}")
+
+        # 6. Fail-closed without an engine
         try:
             dark = mirra.wrap(_agent, principal="mirra-demo-key", home=home,
                               authorizer=FailClosedAuthorizer())
@@ -245,7 +276,8 @@ def main(argv: list[str] | None = None) -> int:
     print("=" * 64)
     if total and passed == total:
         print(f"RESULT: {passed}/{total} PASS — recognition, signed memory, "
-              "per-relationship behavior, and verified enforcement, end to end.")
+              "per-relationship behavior, verified enforcement, and cross-device "
+              "person recognition, end to end.")
         print(f"Run `mirra-demo` again to watch it recognize you. Reset: mirra-demo --reset")
         return 0
     print(f"RESULT: {passed}/{total} PASS — see {CROSS} rows above.")

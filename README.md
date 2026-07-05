@@ -38,6 +38,49 @@ production posture where every action is refused unless the caller supplies
 risk context or step-up approval. If you omit `profile` and everything blocks,
 that is the lockdown working as designed.
 
+## Recognizing a person across devices
+
+`subject_id` alone is a per-app string. A `Person` ties a human's handles
+together so the car, the phone, and the robot know it's the same person —
+carrying one portable, signed relationship history:
+
+```python
+from mirra import PersonRegistry
+
+reg = PersonRegistry(home="~/.mirra")
+mom = reg.create_person(display_name="Mom")
+reg.claim_handle(mom.person_id, "car:driver-1")
+reg.claim_handle(mom.person_id, "robot:mom")
+
+agent = mirra.wrap(my_agent, principal="family-hub", persons=reg)
+agent.remember("car:driver-1", "running late to school drop-off")
+agent.recall("robot:mom")        # <- recalls it: same human, any device
+
+# cross-device: export a signed claim, recognize her on a second device
+claim = reg.export_claim(mom.person_id)          # signed, portable
+other_device.import_claim(claim)                 # verify-on-import, fail-closed
+```
+
+Recognition and continuity are cryptographic (Ed25519-signed claims, verified on
+import); binding a real human (voiceprint/login) to a person key is your
+enrollment step.
+
+## Framework adapters (whole-agent)
+
+Existing security adapters wrap individual *tools*. These wrap the whole *agent*
+— identity, signed per-person memory, and enforcement — in each framework's own
+idioms. All import-guarded (importing never requires the framework) and verified
+against the real libraries.
+
+| Framework | Install | Signed-memory surface |
+|---|---|---|
+| LangChain | `mirra-sdk[langchain]` | `MirraChatMessageHistory` (BaseChatMessageHistory) |
+| LlamaIndex | `mirra-sdk[llamaindex]` | `MirraLlamaIndexMemory` (put/get/get_all) |
+| OpenAI Agents | `mirra-sdk[openai-agents]` | `MirraSession` (SessionABC) |
+| CrewAI | `mirra-sdk[crewai]` | `protect_tool` (enforced BaseTool) + `wrap_agent` |
+
+Each also exposes `wrap_agent(...)` and `protect_tool(...)`.
+
 ## LangChain (whole-agent, not just tools)
 
 Existing security adapters wrap individual *tools*. This wraps the whole

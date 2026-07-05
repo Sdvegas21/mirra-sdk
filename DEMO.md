@@ -7,7 +7,7 @@ The path for an outside developer to wrap an agent and see **enforcement** and
 
 ```bash
 pip install --upgrade mirra-sdk mvar-security clawzero clawseal
-mirra-demo                   # live report: 5/5 PASS, hostile shell blocked, forged record rejected
+mirra-demo                   # live report: 6/6 PASS, hostile shell blocked, forged record rejected
 ```
 
 Run `mirra-demo` a second time and it recognizes you — same identity, memories
