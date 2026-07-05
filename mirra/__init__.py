@@ -13,7 +13,7 @@ from .errors import ExecutionRefused, IdentityError, MemoryUnavailable, MirraErr
 from .identity import LocalIdentityResolver
 from .wrapper import WrappedAgent, wrap
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     "wrap",

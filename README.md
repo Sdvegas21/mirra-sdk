@@ -38,6 +38,33 @@ production posture where every action is refused unless the caller supplies
 risk context or step-up approval. If you omit `profile` and everything blocks,
 that is the lockdown working as designed.
 
+## LangChain (whole-agent, not just tools)
+
+Existing security adapters wrap individual *tools*. This wraps the whole
+*agent* — identity, signed memory, per-user context, and enforcement — in
+LangChain's own idioms:
+
+```python
+pip install "mirra-sdk[langchain]" mvar-security clawzero clawseal
+```
+
+```python
+from mirra.adapters.langchain import wrap_agent, MirraChatMessageHistory
+
+# per-user signed chat history (verify-on-read), for RunnableWithMessageHistory
+history = MirraChatMessageHistory(principal="acme", subject_id="alice")
+
+# or bind a whole chain: each .invoke resolves that subject's verified history,
+# hands it to the chain, and records the exchange as a new signed scroll
+bound = wrap_agent(my_chain, principal="acme")
+bound.invoke("what did we discuss?", subject_id="alice")
+safe_tool = bound.protect_tool(shell_tool, sink="shell.exec")   # reuses ClawZero
+```
+
+`MirraChatMessageHistory` is a real `BaseChatMessageHistory`, so it drops into
+`RunnableWithMessageHistory` (and anywhere a chat-history store is accepted).
+The adapter never imports LangChain at module load — only when you use it.
+
 ## Fail-closed by design
 
 - No enforcement engine → every action is **blocked**, never silently allowed.

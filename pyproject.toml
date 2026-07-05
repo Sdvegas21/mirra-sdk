@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mirra-sdk"
-version = "0.1.1"
+version = "0.1.2"
 description = "MIRRA platform SDK (Edge 1): one wrapper call gives any agent recognition, portable signed memory, per-relationship behavior, and permissioned execution over the frozen v1 core contract."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,6 +33,9 @@ mirra-demo = "mirra.demo:main"
 # default backends when installed (local paths during the restructure).
 execution = ["clawzero>=0.4.1"]
 memory = ["clawseal>=1.1.7"]
+# Framework adapters (whole-agent: identity + signed memory + enforcement).
+langchain = ["langchain-core>=0.3"]
+all = ["clawzero>=0.4.1", "clawseal>=1.1.7", "langchain-core>=0.3"]
 
 [tool.setuptools.packages.find]
 where = ["."]
