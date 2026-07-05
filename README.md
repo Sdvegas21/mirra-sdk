@@ -4,6 +4,18 @@
 portable memory of its relationships, behavior that adapts per relationship, and
 execution that only happens when verified.**
 
+**Zero-config — one line, it just works:**
+
+```python
+import mirra
+
+agent = mirra.guard()                       # stable identity + signed memory + enforcement
+agent.remember("alice", "prefers direct feedback")
+safe = agent.protect(run_shell)             # hostile input blocked out of the box
+```
+
+**Or the full explicit surface:**
+
 ```python
 import mirra
 
