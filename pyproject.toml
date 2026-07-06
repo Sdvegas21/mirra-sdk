@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mirra-sdk"
-version = "0.4.0"
+version = "0.5.0"
 description = "MIRRA platform SDK (Edge 1): one wrapper call gives any agent recognition, portable signed memory, per-relationship behavior, and permissioned execution over the frozen v1 core contract."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,6 +27,7 @@ dependencies = [
 
 [project.scripts]
 mirra-demo = "mirra.demo:main"
+mirra-mcp = "mirra_mcp.server:run"
 
 [project.optional-dependencies]
 # Concrete core components. The SDK speaks only the contract; these provide the
@@ -38,8 +39,11 @@ langchain = ["langchain-core>=0.3"]
 llamaindex = ["llama-index-core>=0.11"]
 openai-agents = ["openai-agents>=0.1"]
 crewai = ["crewai>=0.80"]
+# MCP server: expose MIRRA signed memory to any MCP-speaking AI (Claude Desktop,
+# Cursor, Claude Code) with one config block.
+mcp = ["mcp>=1.0", "clawzero>=0.4.1", "clawseal>=1.1.7"]
 all = [
-    "clawzero>=0.4.1", "clawseal>=1.1.7",
+    "clawzero>=0.4.1", "clawseal>=1.1.7", "mcp>=1.0",
     "langchain-core>=0.3", "llama-index-core>=0.11",
     "openai-agents>=0.1", "crewai>=0.80",
 ]

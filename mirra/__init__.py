@@ -16,7 +16,7 @@ from .identity import LocalIdentityResolver
 from .person import Person, PersonClaim, PersonRegistry
 from .wrapper import WrappedAgent, wrap
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
     "guard",
