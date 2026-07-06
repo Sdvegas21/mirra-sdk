@@ -9,17 +9,23 @@ history, and execution that only happens when verified. Built entirely on the
 frozen v1 core contract (`mirra_core_contract`).
 """
 
+from .embodied import Actuation, ActuationDecision, EmbodiedAgent, Perception, PresentPerson
 from .errors import ExecutionRefused, IdentityError, MemoryUnavailable, MirraError
 from .guard import GuardedAgent, guard
 from .identity import LocalIdentityResolver
 from .person import Person, PersonClaim, PersonRegistry
 from .wrapper import WrappedAgent, wrap
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 __all__ = [
     "guard",
     "GuardedAgent",
+    "EmbodiedAgent",
+    "Perception",
+    "Actuation",
+    "ActuationDecision",
+    "PresentPerson",
     "wrap",
     "WrappedAgent",
     "LocalIdentityResolver",
