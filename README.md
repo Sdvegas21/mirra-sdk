@@ -4,6 +4,9 @@
 portable memory of its relationships, behavior that adapts per relationship, and
 execution that only happens when verified.**
 
+**▶ Try the live playground** (recognize a person, sign a memory, tamper it and watch
+verification fail — real HMAC-SHA256 in your browser): **https://sdvegas21.github.io/mirra-sdk/**
+
 **Zero-config — one line, it just works:**
 
 ```python
