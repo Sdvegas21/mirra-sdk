@@ -20,7 +20,7 @@ def _secret(monkeypatch):
 def test_server_builds_and_registers_tools(tmp_path):
     from mirra_mcp.server import build_server
 
-    mcp = build_server(home=str(tmp_path))
+    mcp = build_server(home=str(tmp_path), subject="alice")
     # FastMCP exposes registered tools; confirm ours are present.
     import anyio
 
@@ -42,6 +42,7 @@ def test_speaks_mcp_over_stdio(tmp_path):
     env = dict(os.environ)
     env["QSEAL_SECRET"] = "test-secret-for-mcp-server"
     env["MIRRA_MCP_HOME"] = str(tmp_path)
+    env["MIRRA_SUBJECT"] = "alice"
     env["PYTHONPATH"] = os.pathsep.join([repo, *paths, env.get("PYTHONPATH", "")])
 
     msgs = (

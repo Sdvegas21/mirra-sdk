@@ -9,31 +9,40 @@ per-subject memory, with **one config block and no SDK code**.
 pip install "mirra-sdk[mcp]"
 ```
 
-Add to your MCP client config (Claude Desktop shown):
+Add to your MCP client config (Claude Desktop shown). One server binds one
+subject, set with `MIRRA_SUBJECT`:
 
 ```json
 {
   "mcpServers": {
-    "mirra": {
+    "mirra-alice": {
       "command": "python",
       "args": ["-m", "mirra_mcp"],
-      "env": { "QSEAL_SECRET": "<your 32-byte hex secret>" }
+      "env": {
+        "QSEAL_SECRET": "<your 32-byte hex secret>",
+        "MIRRA_SUBJECT": "alice"
+      }
     }
   }
 }
 ```
 
 Generate a secret once: `openssl rand -hex 32`. Restart the client. Your AI now
-has four memory tools.
+has four memory tools, all bound to `alice`. Want memory for two people? Run two
+server instances with two `MIRRA_SUBJECT` values — the user, not the agent,
+decides the subjects (see [SCOPE_MODEL.md](SCOPE_MODEL.md)).
 
 ## Tools
 
+None of these take a subject argument — the subject is fixed by config, so the
+agent cannot name or reach another one.
+
 | Tool | What it does |
 |---|---|
-| `remember(subject_id, content)` | Save a signed, agent-attested memory about a person |
-| `recall(subject_id, query?)` | Return only that subject's verified memories |
-| `verify_memory(subject_id)` | Report how many of a subject's memories pass real crypto verification |
-| `whoami()` | The memory agent's stable identity |
+| `remember(content)` | Save a signed, agent-attested memory about the configured subject |
+| `recall(query?)` | Return only the configured subject's verified memories |
+| `verify_memory()` | Report how many memories pass real crypto verification |
+| `whoami()` | The memory agent's stable identity (does not reveal the subject) |
 
 ## The trust boundary (enforced server-side, not hoped-for)
 
@@ -41,10 +50,11 @@ When a remote AI writes to your signed store, three guarantees hold — each wit
 committed regression test that fails the build if it breaks
 (`tests/test_mcp_trust_boundary.py`):
 
-1. **Per-subject recall isolation.** A memory scope is bound to one subject; the
-   read path has no subject argument to abuse, so an agent talking about Jill
-   cannot recall Todd's history. Enforced structurally, tested against leakage in
-   every direction.
+1. **Per-subject recall isolation, config-fixed.** One server binds one subject,
+   read from `MIRRA_SUBJECT` at launch — the agent has no tool, argument, or path
+   to name, change, or enumerate another subject. Isolation is by construction:
+   there is no subject parameter to abuse. Full model and its explicit limits in
+   [SCOPE_MODEL.md](SCOPE_MODEL.md).
 
 2. **Agent-attested provenance.** Every memory written over MCP is marked
    `mcp-agent` *inside its signed content* — so a memory an AI wrote is
