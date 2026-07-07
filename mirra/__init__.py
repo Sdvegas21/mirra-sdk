@@ -9,14 +9,15 @@ history, and execution that only happens when verified. Built entirely on the
 frozen v1 core contract (`mirra_core_contract`).
 """
 
+from .continuity import ContinuityKernel, ContinuitySession, EmotionalBaseline
 from .embodied import Actuation, ActuationDecision, EmbodiedAgent, Perception, PresentPerson
-from .errors import ExecutionRefused, IdentityError, MemoryUnavailable, MirraError
+from .errors import ContinuityError, ExecutionRefused, IdentityError, MemoryUnavailable, MirraError
 from .guard import GuardedAgent, guard
 from .identity import LocalIdentityResolver
 from .person import Person, PersonClaim, PersonRegistry
 from .wrapper import WrappedAgent, wrap
 
-__version__ = "0.5.1"
+__version__ = "0.6.0"
 
 __all__ = [
     "guard",
@@ -29,12 +30,16 @@ __all__ = [
     "wrap",
     "WrappedAgent",
     "LocalIdentityResolver",
+    "ContinuityKernel",
+    "ContinuitySession",
+    "EmotionalBaseline",
     "Person",
     "PersonClaim",
     "PersonRegistry",
     "MirraError",
     "IdentityError",
     "MemoryUnavailable",
+    "ContinuityError",
     "ExecutionRefused",
     "__version__",
 ]
