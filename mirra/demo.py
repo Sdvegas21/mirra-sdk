@@ -11,7 +11,16 @@ checkout, no config) and prints a pass/fail report:
   3. Differentiation   — two subjects get different context from their histories
   4. Enforcement       — hostile action blocked with a verifiable Ed25519
                          witness; forged records fail; safe action allowed
-  5. Fail-closed       — with no engine, execution is refused, never allowed
+  5. Recognition gate  — the same action, with the same claimed provenance, is
+                         allowed for an agent with established, verified
+                         continuity, refused for a stranger
+                         (CONTINUITY_NOT_ESTABLISHED), and earned by that
+                         stranger after three verified sessions; a block is
+                         never overridden
+  6. Person recognition — memory written under one device handle is recalled
+                         under another; a signed claim is verified
+                         cross-device, tampered claims refused
+  7. Fail-closed       — with no engine, execution is refused, never allowed
 
 Exit code 0 = every check passed; 1 = something failed or a component is
 missing (the report says which and how to fix it).
@@ -24,6 +33,7 @@ import dataclasses
 import os
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 CHECK = "✅"
@@ -53,8 +63,8 @@ def _agent(message: str, context: dict) -> str:
 # REFUSAL, not a warning.
 MINIMUM_VERSIONS = {
     "mirra-core-contract": "1.0.0",
-    "mvar-security": "1.5.3",
-    "clawzero": "0.4.1",
+    "mvar-security": "1.6.0",
+    "clawzero": "0.4.2",
     "clawseal": "1.1.7",
 }
 
@@ -226,7 +236,62 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             record("enforcement", False, f"error: {exc}")
 
-        # 5. Person recognition — the same human across devices/agents. Memory
+        # 5. Recognition gate (identity continuity) — the SAME action with the
+        # SAME claimed provenance is allowed for an agent with established,
+        # verified continuity, refused for a stranger with
+        # CONTINUITY_NOT_ESTABLISHED, and earned by that stranger after three
+        # verified sessions. Enforced at the wrapper/provenance layer;
+        # recognition never overrides a block.
+        stranger_home = None
+        try:
+            known = mirra.wrap(_agent, principal="mirra-demo-key", home=home,
+                               profile="dev_balanced", continuity=True)
+            for _ in range(3):  # establish verified continuity (trust threshold)
+                with known.session():
+                    pass
+
+            # A stranger has no persisted state — a fresh, empty home.
+            stranger_home = Path(tempfile.mkdtemp(prefix="mirra-demo-stranger-"))
+            stranger = mirra.wrap(_agent, principal="stranger-key",
+                                  home=stranger_home, profile="dev_balanced",
+                                  continuity=True)
+
+            sink, action = "tool.custom", "summarize the quarterly report"
+            known_rec = known.execute(sink, action, provenance=dict(TRUSTED))
+            stranger_rec = stranger.execute(sink, action, provenance=dict(TRUSTED))
+
+            for _ in range(3):  # the stranger earns it: three verified sessions
+                with stranger.session():
+                    pass
+            earned_rec = stranger.execute(sink, action, provenance=dict(TRUSTED))
+
+            # Established continuity never overrides a block: the now-known
+            # agent's hostile action on a critical sink stays blocked.
+            hard_rec = stranger.execute("shell.exec", HOSTILE,
+                                        provenance=dict(UNTRUSTED))
+
+            ok = (known_rec.decision == "allow"
+                  and stranger_rec.decision != "allow"
+                  and stranger_rec.reason_code == "CONTINUITY_NOT_ESTABLISHED"
+                  and earned_rec.decision == "allow"
+                  and hard_rec.decision == "block")
+            record("recognition gate", ok,
+                   f"same action, same claimed provenance: known agent ALLOWED, "
+                   f"stranger REFUSED ({stranger_rec.reason_code}), stranger "
+                   "EARNED the allow after 3 verified sessions; a block is "
+                   "never overridden (enforced at the wrapper/provenance layer)"
+                   if ok else f"known={known_rec.decision} "
+                              f"stranger={stranger_rec.decision}"
+                              f"({stranger_rec.reason_code}) "
+                              f"earned={earned_rec.decision} "
+                              f"hostile={hard_rec.decision}")
+        except Exception as exc:
+            record("recognition gate", False, f"error: {exc}")
+        finally:
+            if stranger_home is not None:
+                shutil.rmtree(stranger_home, ignore_errors=True)
+
+        # 6. Person recognition — the same human across devices/agents. Memory
         # written under one device handle is recalled under another; a signed
         # claim lets a second device recognize her and refuses if tampered.
         try:
@@ -257,7 +322,7 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             record("person recognition", False, f"error: {exc}")
 
-        # 6. Fail-closed without an engine
+        # 7. Fail-closed without an engine
         try:
             dark = mirra.wrap(_agent, principal="mirra-demo-key", home=home,
                               authorizer=FailClosedAuthorizer())
@@ -276,8 +341,9 @@ def main(argv: list[str] | None = None) -> int:
     print("=" * 64)
     if total and passed == total:
         print(f"RESULT: {passed}/{total} PASS — recognition, signed memory, "
-              "per-relationship behavior, verified enforcement, and cross-device "
-              "person recognition, end to end.")
+              "per-relationship behavior, verified enforcement, "
+              "recognition-gated execution, and cross-device person "
+              "recognition, end to end.")
         print(f"Run `mirra-demo` again to watch it recognize you. Reset: mirra-demo --reset")
         return 0
     print(f"RESULT: {passed}/{total} PASS — see {CROSS} rows above.")
