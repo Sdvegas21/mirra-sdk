@@ -53,6 +53,39 @@ production posture where every action is refused unless the caller supplies
 risk context or step-up approval. If you omit `profile` and everything blocks,
 that is the lockdown working as designed.
 
+## Identity continuity (`continuity=True`)
+
+```python
+wrapped = mirra.wrap(my_agent, principal="team-key-1", continuity=True)
+```
+
+The agent restores its persisted identity state — emotional baseline and
+pathway records, accrued as a deterministic pure function of session inputs
+(deterministic state accrual, and no stronger claim) — at session start only
+after whole-record verification: an Ed25519 signature over the state snapshot,
+a hash-chained, per-entry-signed transition log, and an exact replay match. A
+forged snapshot, a rolled-back but validly-signed snapshot, a truncated or
+re-chained log, a deleted snapshot, or a foreign identity key each refuse
+restoration rather than degrade.
+
+Recognition is enforced, not merely emitted: an agent without established,
+verified continuity has its provenance claims treated as unstated and never
+receives an automatic allow (`CONTINUITY_NOT_ESTABLISHED`, step-up). The same
+action with the same claimed provenance is allowed for a known principal,
+refused for a stranger, and earned by that stranger after three verified
+sessions — while established continuity never overrides a block. Known
+limitation, stated plainly: in v0.2 the governor trusts the transport of the
+identity context — a hostile caller invoking the engine directly can fabricate
+it and bypass the recognition gate (never the taint law) — so the enforcement
+claim is scoped to trusted-edge deployments until v0.3 in-engine verification
+lands.
+
+Prove it post-install, no checkout needed:
+
+```bash
+verify-continuity            # 7/7 CONTINUITY PROVEN
+```
+
 ## Recognizing a person across devices
 
 `subject_id` alone is a per-app string. A `Person` ties a human's handles
@@ -135,7 +168,7 @@ The adapter never imports LangChain at module load — only when you use it.
 Installed (pip):
 
 ```bash
-mirra-demo                   # live 5-check report; run twice — the second run proves recognition
+mirra-demo                   # live 7-check report; run twice — the second run proves recognition
 ```
 
 From a checkout:
