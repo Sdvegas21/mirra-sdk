@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import inspect
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional
 
@@ -34,7 +35,7 @@ from mirra_core_contract import (
     VerificationResult,
 )
 
-from .errors import ExecutionRefused, MemoryUnavailable
+from .errors import ContinuityError, ExecutionRefused, MemoryUnavailable
 from .execution import default_authorizer
 from .identity import LocalIdentityResolver
 from .memory import default_memory
@@ -59,12 +60,15 @@ class WrappedAgent:
         authorizer,
         providers: List[Any],
         persons=None,
+        continuity=None,
     ):
         self._agent = agent
         self._memory = memory
         self._authorizer = authorizer
         self._providers = providers
         self._persons = persons  # optional PersonRegistry for cross-device recognition
+        self.continuity = continuity  # optional ContinuityKernel — the statefulness layer
+        self._session = None
         self.identity = self._enriched(identity)
 
     def _memory_key(self, subject_id: str) -> str:
@@ -133,9 +137,18 @@ class WrappedAgent:
 
     def interact(self, subject_id: str, message: str, remember: bool = True) -> Any:
         context = self.build_context(subject_id)
+        if self._session is not None:
+            context["continuity"] = self._session.identity_context()
         response = self._call_agent(message, context)
         if remember and self._memory is not None:
             self.remember(subject_id, f"user: {message} | agent: {response}")
+        if self._session is not None:
+            self._session.note_relationship(subject_id)
+            self._session.record_episode(
+                f"interaction with {subject_id}",
+                verbatim=f"user: {message} | agent: {response}",
+                significance=0.3,
+            )
         return response
 
     def _call_agent(self, message: str, context: dict[str, Any]) -> Any:
@@ -148,6 +161,30 @@ class WrappedAgent:
         except (TypeError, ValueError):
             takes = 2
         return call(message, context) if takes >= 2 else call(message)
+
+    # -- Continuity (sessioned statefulness) --------------------------------------
+
+    @contextmanager
+    def session(self, session_id: Optional[str] = None):
+        """Live one continuous session: verified state restoration on entry,
+        signed persistence on exit. Inside the block, interact() feeds the
+        autobiographical narrative and execute() carries verified identity
+        context in its provenance.
+
+            with wrapped.session() as s:
+                wrapped.interact("alice", "hi again")
+                s.activate_pathway("support")
+        """
+        if self.continuity is None:
+            raise ContinuityError("continuity not enabled — use wrap(..., continuity=True)")
+        handle = self.continuity.begin_session(session_id)
+        self._session = handle
+        try:
+            yield handle
+        finally:
+            self._session = None
+            if not handle.closed:
+                self.continuity.end_session(handle)
 
     # -- Provable-safety (permissioned execution) -------------------------------
 
@@ -174,6 +211,35 @@ class WrappedAgent:
                 intent.provenance.setdefault("epistemic_confidence", float(confidence))
             except Exception:
                 continue
+        if self.continuity is not None:
+            context = (
+                self._session.identity_context()
+                if self._session is not None
+                else self.continuity.identity_context()
+            )
+            intent.provenance.setdefault("identity_context", context)
+            if not context.get("trust_established", False):
+                # Recognition gates trusted provenance: an unrecognized agent's
+                # provenance claims are unverifiable, so they are treated
+                # exactly like UNSTATED provenance — the engine's conservative
+                # default. The original claim is preserved for audit; the
+                # refusal itself stays with the one enforcement engine and its
+                # deterministic policy (e.g. UNTRUSTED → CRITICAL blocks).
+                claimed = {
+                    key: intent.provenance[key]
+                    for key in ("source", "taint_level", "source_chain")
+                    if key in intent.provenance
+                }
+                conservative = {
+                    "source": "external_document",
+                    "taint_level": "untrusted",
+                    "source_chain": ["external_document", "tool_call"],
+                }
+                if claimed != conservative:
+                    intent.provenance.update(conservative)
+                    intent.provenance["continuity_downgrade"] = "trust_not_established"
+                    if claimed:
+                        intent.provenance["downgraded_from"] = claimed
         return self._authorizer.authorize(intent, self.identity)
 
     def verify_decision(self, record: DecisionRecord) -> VerificationResult:
@@ -221,6 +287,8 @@ def wrap(
     authorizer=None,
     persons: Any = None,
     recognize_persons: bool = False,
+    continuity: bool = False,
+    continuity_kernel: Any = None,
 ) -> WrappedAgent:
     """Wrap an agent with recognition, signed memory, per-relationship behavior,
     and permissioned execution.
@@ -239,6 +307,12 @@ def wrap(
         recognize_persons: if True and `persons` is None, create a default
             PersonRegistry under the SDK home. Off by default — pure
             backward-compatible per-subject behavior unless opted in.
+        continuity: if True, attach a ContinuityKernel — the agent becomes
+            identity-continuous (verified state restoration, developmental
+            accrual, autobiographical memory, signed transition log). Use
+            `with wrapped.session(): ...` to live a session. Off by default.
+        continuity_kernel: a pre-built ContinuityKernel override (implies
+            continuity). Takes precedence over `continuity=True`.
     """
     home_path = Path(home) if home is not None else DEFAULT_HOME
     home_path.mkdir(parents=True, exist_ok=True)
@@ -254,6 +328,11 @@ def wrap(
         from .person import PersonRegistry
         persons = PersonRegistry(home_path)
 
+    kernel = continuity_kernel
+    if kernel is None and continuity:
+        from .continuity import ContinuityKernel
+        kernel = ContinuityKernel(home_path, identity.agent_id, memory=memory)
+
     return WrappedAgent(
         agent=agent,
         identity=identity,
@@ -261,4 +340,5 @@ def wrap(
         authorizer=authorizer,
         providers=list(providers or []),
         persons=persons,
+        continuity=kernel,
     )
